@@ -3,8 +3,8 @@ AI-powered platform that collects, analyzes, and organizes customer feedback usi
 <br>
 ## features
 <br>
-#Authentication and Authorization
--user regristration and login
--secure password handling
--workspace-based access
+Authentication and Authorization<br>
+-user regristration and login<br>
+-secure password handling<br>
+-workspace-based access<br>
 -Role-Baesd-Access control(RBAC)
