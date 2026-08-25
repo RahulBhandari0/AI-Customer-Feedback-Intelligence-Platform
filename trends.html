@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Trends{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-1">Theme Trends</h1>
+<p class="text-slate-500 text-sm mb-6">Which themes are growing week over week — react to emerging issues early.</p>
+
+<div id="spikes" class="space-y-2 mb-6"></div>
+
+<div class="card mb-6">
+  <div class="font-medium mb-3">Weekly volume by theme (last 8 weeks)</div>
+  <canvas id="trendsChart" height="110"></canvas>
+</div>
+
+<div class="card">
+  <div class="font-medium mb-3">All themes</div>
+  <div class="grid grid-cols-3 gap-3">
+    {% for t in themes %}
+    <button onclick="openTheme('{{ t.id }}','{{ t.name|e }}')" class="text-left border rounded-lg p-3 hover:border-brand transition">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:{{ t.color }}"></span>
+        <span class="font-medium text-sm">{{ t.name }}</span>
+      </div>
+      {% if t.description %}<div class="text-xs text-slate-400 mt-1">{{ t.description }}</div>{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="theme-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50" onclick="if(event.target===this) closeTheme()">
+  <div class="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="theme-modal-title" class="font-semibold text-lg"></h2>
+      <button onclick="closeTheme()" class="text-slate-400 hover:text-slate-700">✕</button>
+    </div>
+    <div id="theme-modal-items" class="space-y-3 text-sm"></div>
+  </div>
+</div>
+
+<script>
+async function loadTrends() {
+  const res = await fetch('/api/trends');
+  const data = await res.json();
+
+  const spikeDiv = document.getElementById('spikes');
+  if (data.spikes.length) {
+    spikeDiv.innerHTML = data.spikes.map(s =>
+      `<div class="bg-orange-50 border border-orange-200 text-orange-800 text-sm px-4 py-3 rounded-lg">
+        ⚠️ <strong>${s.name}</strong> is spiking — up ${s.change_pct}% vs the previous week.
+      </div>`).join('');
+  }
+
+  const colors = ['#6C5CE7','#00B894','#0984E3','#D63031','#E17055','#00CEC9','#FDCB6E','#A29BFE'];
+  new Chart(document.getElementById('trendsChart'), {
+    type: 'line',
+    data: {
+      labels: data.weeks,
+      datasets: data.series.map((s,i) => ({
+        label: s.name, data: s.values, borderColor: s.color || colors[i % colors.length],
+        backgroundColor: 'transparent', tension: 0.3
+      }))
+    },
+    options: { scales: { y: { beginAtZero: true } } }
+  });
+}
+loadTrends();
+
+async function openTheme(id, name) {
+  document.getElementById('theme-modal-title').innerText = name;
+  document.getElementById('theme-modal-items').innerHTML = 'Loading…';
+  document.getElementById('theme-modal').classList.remove('hidden');
+  document.getElementById('theme-modal').classList.add('flex');
+  const res = await fetch(`/api/themes/${id}/feedback`);
+  const data = await res.json();
+  document.getElementById('theme-modal-items').innerHTML = data.items.length ?
+    data.items.map(it => `<div class="border-b pb-2"><div>${it.content}</div>
+      <div class="text-xs text-slate-400 mt-1">${it.channel} · ${it.sentiment || 'n/a'} · ${new Date(it.created_at).toLocaleDateString()}</div></div>`).join('')
+    : '<div class="text-slate-400">No items for this theme yet.</div>';
+}
+function closeTheme() {
+  document.getElementById('theme-modal').classList.add('hidden');
+  document.getElementById('theme-modal').classList.remove('flex');
+}
+</script>
+{% endblock %}

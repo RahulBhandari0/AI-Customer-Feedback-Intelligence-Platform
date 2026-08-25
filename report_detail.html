@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ report.title }}{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <a href="/reports" class="text-xs text-slate-400 hover:underline">← All reports</a>
+    <h1 class="text-2xl font-semibold mt-1">{{ report.title }}</h1>
+  </div>
+  <a href="/reports/{{ report.id }}/export.pdf" class="btn btn-secondary">⬇ Export PDF</a>
+</div>
+
+<div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="card"><div class="text-xs text-slate-500 uppercase">Total feedback</div>
+    <div class="text-2xl font-semibold mt-1">{{ report.content_json.stats.total }}</div></div>
+  <div class="card"><div class="text-xs text-slate-500 uppercase">% negative</div>
+    <div class="text-2xl font-semibold mt-1">{{ report.content_json.stats.pct_negative }}%</div></div>
+  <div class="card"><div class="text-xs text-slate-500 uppercase">Prior period</div>
+    <div class="text-2xl font-semibold mt-1">{{ report.content_json.stats.pct_negative_prev }}%</div></div>
+</div>
+
+<div class="card mb-6">
+  <div class="font-medium mb-3">AI-written narrative</div>
+  <div class="text-sm whitespace-pre-wrap leading-relaxed">{{ report.content_json.narrative }}</div>
+</div>
+
+<div class="card">
+  <div class="font-medium mb-3">Top themes this period</div>
+  <table class="w-full text-sm">
+    <thead class="text-xs text-slate-400 uppercase"><tr><th class="text-left py-1">Theme</th><th class="text-left py-1">Count</th><th class="text-left py-1">vs prior</th></tr></thead>
+    <tbody>
+    {% for t in report.content_json.stats.top_themes %}
+      <tr class="border-t"><td class="py-2">{{ t.name }}</td><td class="py-2">{{ t.count }}</td>
+        <td class="py-2 {% if t.delta_pct > 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ t.delta_pct }}%</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

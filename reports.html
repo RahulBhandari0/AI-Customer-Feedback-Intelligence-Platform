@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-semibold">Voice-of-Customer Reports</h1>
+    <p class="text-slate-500 text-sm">One click, a leadership-ready digest generated from real data.</p>
+  </div>
+  {% if user.role.value in ['ADMIN','ANALYST'] %}
+  <form method="post" action="/reports/generate" class="flex gap-2">
+    <select name="period_days" class="!w-auto">
+      <option value="7">Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="90">Last 90 days</option>
+    </select>
+    <button class="btn btn-primary" type="submit">Generate report</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="space-y-3">
+  {% for r in reports %}
+  <a href="/reports/{{ r.id }}" class="card flex justify-between items-center hover:border-brand transition block">
+    <div>
+      <div class="font-medium">{{ r.title }}</div>
+      <div class="text-xs text-slate-400 mt-1">Generated {{ r.created_at.strftime('%b %d, %Y %H:%M') }} UTC</div>
+    </div>
+    <span class="text-brand text-sm">View →</span>
+  </a>
+  {% else %}
+  <div class="card text-center text-slate-400 py-10">No reports yet — generate your first one above.</div>
+  {% endfor %}
+</div>
+{% endblock %}

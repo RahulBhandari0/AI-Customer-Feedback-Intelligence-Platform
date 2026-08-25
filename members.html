@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Members{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-1">Workspace Members</h1>
+<p class="text-slate-500 text-sm mb-6">Admins manage members and roles. Analysts ingest & triage feedback. Viewers are read-only.</p>
+
+{% if error %}<div class="mb-4 text-sm bg-red-50 text-red-700 px-3 py-2 rounded-lg">{{ error }}</div>{% endif %}
+
+{% if user.role.value == 'ADMIN' %}
+<div class="card mb-6">
+  <div class="font-medium mb-3">Invite a teammate</div>
+  <form method="post" action="/members/invite" class="grid grid-cols-4 gap-2">
+    <input type="text" name="name" placeholder="Name" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="password" name="password" placeholder="Temporary password" minlength="8" required>
+    <select name="role">
+      <option value="VIEWER">Viewer</option>
+      <option value="ANALYST">Analyst</option>
+      <option value="ADMIN">Admin</option>
+    </select>
+    <button class="btn btn-primary col-span-4" type="submit">Invite</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card !p-0 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-xs text-slate-500 uppercase"><tr><th class="text-left px-4 py-3">Name</th><th class="text-left px-4 py-3">Email</th><th class="text-left px-4 py-3">Role</th></tr></thead>
+    <tbody>
+    {% for m in members %}
+      <tr class="border-t"><td class="px-4 py-3">{{ m.name }}</td><td class="px-4 py-3 text-slate-500">{{ m.email }}</td>
+        <td class="px-4 py-3">
+        {% if user.role.value == 'ADMIN' %}
+          <form method="post" action="/members/{{ m.id }}/role" class="inline">
+            <select name="role" onchange="this.form.submit()" class="!w-auto text-xs">
+              {% for r in ['ADMIN','ANALYST','VIEWER'] %}<option value="{{ r }}" {% if m.role.value==r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+            </select>
+          </form>
+        {% else %}
+          <span class="badge status-NEW">{{ m.role.value }}</span>
+        {% endif %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

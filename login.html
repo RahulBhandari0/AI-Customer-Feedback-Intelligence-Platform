@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block auth_content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-dark to-slate-900 px-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-6">
+      <div class="inline-flex w-10 h-10 rounded-lg bg-brand items-center justify-center text-white font-bold mb-3">L</div>
+      <h1 class="text-white text-xl font-semibold">Welcome back to LOOP</h1>
+      <p class="text-white/50 text-sm mt-1">Close the loop on customer feedback.</p>
+    </div>
+    <div class="bg-white rounded-xl p-6 shadow-xl">
+      {% if error %}<div class="mb-4 text-sm bg-red-50 text-red-700 px-3 py-2 rounded-lg">{{ error }}</div>{% endif %}
+      <form method="post" action="/login" class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-slate-500">Email</label>
+          <input type="email" name="email" required placeholder="admin@demo.loop">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500">Password</label>
+          <input type="password" name="password" required placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary w-full justify-center" type="submit">Log in</button>
+      </form>
+      <p class="text-xs text-slate-500 mt-4 text-center">No account? <a href="/signup" class="text-brand font-medium">Create a workspace</a></p>
+    </div>
+    <div class="mt-4 bg-white/5 border border-white/10 rounded-lg p-3 text-white/60 text-xs">
+      <strong class="text-white/80">Demo credentials</strong> (after running the seed script):<br>
+      admin@demo.loop · analyst@demo.loop · viewer@demo.loop — password <code>Password123!</code>
+    </div>
+  </div>
+</div>
+{% endblock %}
