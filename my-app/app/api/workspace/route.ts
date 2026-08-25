@@ -1,8 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma'; // Clean singleton import
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +15,6 @@ export async function POST(req: Request) {
       return new NextResponse('Name and slug are required', { status: 400 });
     }
 
-    // Workspace aur Admin Membership create karna
     const workspace = await prisma.workspace.create({
       data: {
         name,
