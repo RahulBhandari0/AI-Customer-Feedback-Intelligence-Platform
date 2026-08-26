@@ -1,6 +1,9 @@
+import 'dotenv/config'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log('Seeding initial data...')
@@ -10,6 +13,7 @@ async function main() {
     where: { email: 'admin@feedback.com' },
     update: {},
     create: {
+      clerkUserId: 'seed-admin',
       email: 'admin@feedback.com',
       name: 'Admin User',
       role: 'ADMIN',
