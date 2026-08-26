@@ -1,36 +1,56 @@
-
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
- 
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-enum Role {
-  ADMIN
-  USER
-  MEMBER
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
-  id          String     @id @default(cuid())
-  email       String     @unique
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String   @unique
   name        String?
-  role        Role       @default(USER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships WorkspaceMember[]
   feedbacks   Feedback[]
-  clerkUserId String     @unique
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members   WorkspaceMember[]
+  feedbacks Feedback[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String    @default("MEMBER")
+  createdAt   DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
 }
 
 model Feedback {
-  id        String   @id @default(cuid())
-  content   String
-  source    String
-  sentiment String
-  category  String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  content     String
+  source      String
+  userId      String
+  workspaceId String
+  createdAt   DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
