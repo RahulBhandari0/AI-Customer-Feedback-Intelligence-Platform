@@ -14,7 +14,7 @@ enum Role {
 
 model User {
   id          String            @id @default(uuid())
-  clerkUserId String?           @unique
+  clerkUserId String?
   email       String            @unique
   name        String?
   role        String            @default("USER")
@@ -46,16 +46,23 @@ model WorkspaceMember {
 }
 
 model Feedback {
-  id          String     @id @default(cuid())
-  content     String
-  source      String
-  sentiment   String?
-  category    String?
-  createdAt   DateTime   @default(now())
-  userId      String?
-  workspaceId String?
-  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id            String     @id @default(cuid())
+  content       String
+  source        String     @default("Web Form")
+  sentiment     String?    // Positive, Neutral, Negative
+  sentimentScore Float?    @default(0.0)
+  category      String?    // Performance, Bug, Feature Request, UI/UX, Billing, General
+  urgency       String?    @default("Medium") // High, Medium, Low
+  status        String?    @default("NEW")    // NEW, IN_REVIEW, ACTIONED
+  customerName  String?
+  customerEmail String?
+  summary       String?
+  tags          String[]   @default([])
+  createdAt     DateTime   @default(now())
+  userId        String?
+  workspaceId   String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model AnalyticsReport {
