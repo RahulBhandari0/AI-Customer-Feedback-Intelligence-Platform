@@ -8,6 +8,8 @@ generator client {
 
 enum Role {
   ADMIN
+  ANALYST
+  VIEWER
   USER
   MEMBER
 }

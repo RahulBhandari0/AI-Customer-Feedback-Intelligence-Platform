@@ -15,8 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en" className="dark">
-        <body className="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white">
+      <html lang="en" className="dark" suppressHydrationWarning>
+        <body className="bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white transition-colors duration-200">
           <Navbar />
           <main className="flex-1 w-full">{children}</main>
         </body>

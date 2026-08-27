@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { analyzeFeedbackWithAI } from '@/lib/ai';
+import {
+  getWorkspaceContext,
+  canIngestFeedback,
+  canTriageFeedback,
+  canDeleteFeedback,
+  forbiddenResponse,
+} from '@/lib/rbac';
 
 export async function GET(req: NextRequest) {
   try {
+    const context = await getWorkspaceContext(req);
     const { searchParams } = new URL(req.url);
+
     const sentiment = searchParams.get('sentiment');
     const category = searchParams.get('category');
     const source = searchParams.get('source');
@@ -12,9 +21,12 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search');
     const dateRange = searchParams.get('dateRange'); // '7d', '30d', '90d', 'all'
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.max(1, Math.min(50, parseInt(searchParams.get('limit') || '10', 10)));
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '10', 10)));
 
-    const whereClause: Record<string, unknown> = {};
+    // Multi-tenant isolation: strictly filter by active workspace
+    const whereClause: Record<string, unknown> = {
+      workspaceId: context.workspaceId,
+    };
 
     if (sentiment && sentiment !== 'ALL') {
       whereClause.sentiment = sentiment;
@@ -61,16 +73,26 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
-    // Compute live stats for the workspace/filter
-    const totalCount = await prisma.feedback.count();
-    const positiveCount = await prisma.feedback.count({ where: { sentiment: 'Positive' } });
-    const neutralCount = await prisma.feedback.count({ where: { sentiment: 'Neutral' } });
-    const negativeCount = await prisma.feedback.count({ where: { sentiment: 'Negative' } });
-    const highUrgencyCount = await prisma.feedback.count({ where: { urgency: 'High' } });
+    // Compute live stats scoped strictly to the current workspace
+    const workspaceScope = { workspaceId: context.workspaceId };
+    const totalCount = await prisma.feedback.count({ where: workspaceScope });
+    const positiveCount = await prisma.feedback.count({ where: { ...workspaceScope, sentiment: 'Positive' } });
+    const neutralCount = await prisma.feedback.count({ where: { ...workspaceScope, sentiment: 'Neutral' } });
+    const negativeCount = await prisma.feedback.count({ where: { ...workspaceScope, sentiment: 'Negative' } });
+    const highUrgencyCount = await prisma.feedback.count({ where: { ...workspaceScope, urgency: 'High', status: { not: 'ACTIONED' } } });
 
     return NextResponse.json({
       success: true,
       feedbacks,
+      feedback: feedbacks,
+      context: {
+        workspaceId: context.workspaceId,
+        workspaceName: context.workspaceName,
+        workspaceSlug: context.workspaceSlug,
+        userRole: context.userRole,
+        userName: context.userName,
+        userEmail: context.userEmail,
+      },
       pagination: {
         page,
         limit,
@@ -97,6 +119,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const context = await getWorkspaceContext(req);
+
+    // RBAC Check: Viewers are read-only
+    if (!canIngestFeedback(context.userRole)) {
+      return forbiddenResponse('Viewer role is read-only. Ingestion is restricted to Admins and Analysts.');
+    }
+
     const body = await req.json();
     const { content, source = 'Web Form', customerName, customerEmail } = body;
 
@@ -120,9 +149,10 @@ export async function POST(req: NextRequest) {
         urgency: aiAnalysis.urgency,
         summary: aiAnalysis.summary,
         tags: aiAnalysis.tags,
-        status: 'NEW', // Zidio Brief: NEW -> REVIEWED -> ACTIONED
+        status: 'NEW', // NEW -> REVIEWED -> ACTIONED
         customerName: customerName || null,
         customerEmail: customerEmail || null,
+        workspaceId: context.workspaceId,
       },
     });
 
@@ -145,6 +175,13 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const context = await getWorkspaceContext(req);
+
+    // RBAC Check: Viewers cannot triage or update feedback
+    if (!canTriageFeedback(context.userRole)) {
+      return forbiddenResponse('Viewer role is read-only. Updating triage status is restricted to Admins and Analysts.');
+    }
+
     const body = await req.json();
     const { id, status, category, urgency } = body;
 
@@ -152,6 +189,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Feedback ID is required' },
         { status: 400 }
+      );
+    }
+
+    // Ensure item belongs to the caller's workspace
+    const existing = await prisma.feedback.findFirst({
+      where: { id, workspaceId: context.workspaceId },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'Feedback item not found in this workspace' },
+        { status: 404 }
       );
     }
 
@@ -176,6 +225,13 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const context = await getWorkspaceContext(req);
+
+    // RBAC Check: Only Admins can permanently delete feedback items
+    if (!canDeleteFeedback(context.userRole)) {
+      return forbiddenResponse('Only Admins are permitted to delete feedback items.');
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
@@ -186,11 +242,23 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // Ensure item belongs to the caller's workspace
+    const existing = await prisma.feedback.findFirst({
+      where: { id, workspaceId: context.workspaceId },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'Feedback item not found in this workspace' },
+        { status: 404 }
+      );
+    }
+
     await prisma.feedback.delete({
       where: { id },
     });
 
-    return NextResponse.json({ success: true, message: 'Feedback deleted' });
+    return NextResponse.json({ success: true, message: 'Feedback deleted successfully' });
   } catch (error: unknown) {
     console.error('Error deleting feedback:', error);
     return NextResponse.json(

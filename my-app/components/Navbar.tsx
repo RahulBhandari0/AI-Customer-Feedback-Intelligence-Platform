@@ -1,48 +1,83 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { UserButton, Show, SignInButton } from '@clerk/nextjs';
+import { UserButton, SignInButton, useUser } from '@clerk/nextjs';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Navbar() {
   const pathname = usePathname();
+  const { isSignedIn, isLoaded } = useUser();
+  const [role, setRole] = useState<'ADMIN' | 'ANALYST' | 'VIEWER'>('ADMIN');
+  const [workspaceName, setWorkspaceName] = useState<string>('Acme Corp');
+
+  useEffect(() => {
+    async function loadContext() {
+      try {
+        const res = await fetch('/api/workspace/members');
+        const data = await res.json();
+        if (data.success && data.workspace) {
+          setWorkspaceName(data.workspace.name);
+          setCurrentRole(data.currentRole);
+        }
+      } catch (err) {
+        console.error('Error loading navbar context:', err);
+      }
+    }
+
+    const setCurrentRole = (r?: 'ADMIN' | 'ANALYST' | 'VIEWER') => {
+      if (r && ['ADMIN', 'ANALYST', 'VIEWER'].includes(r)) {
+        setRole(r);
+      }
+    };
+
+    loadContext();
+  }, []);
 
   const navItems = [
     { label: 'Feedback Inbox', href: '/feedback' },
-    { label: 'Submit Feedback', href: '/feedback/new' },
-    { label: 'Bulk CSV Import', href: '/feedback/import' },
     { label: 'Analytics Dashboard', href: '/dashboard' },
+    { label: 'Team & RBAC', href: '/workspace/members' },
   ];
 
+  const getRoleBadgeColor = () => {
+    switch (role) {
+      case 'ADMIN':
+        return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20';
+      case 'ANALYST':
+        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
+      case 'VIEWER':
+        return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20';
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200/90 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2.5 font-bold text-lg text-white group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+          <Link href="/" className="flex items-center gap-2.5 font-bold text-lg group">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25 group-hover:scale-105 transition-transform">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400">
-              LOOP Feedback
-            </span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              AI Powered
+            <span className="font-extrabold text-slate-900 dark:text-white tracking-tight">
+              LOOP
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || (item.href === '/feedback' && pathname.startsWith('/feedback'));
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-xs dark:bg-blue-600/15 dark:text-blue-400 dark:border-blue-500/30'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   {item.label}
@@ -52,22 +87,33 @@ export function Navbar() {
           </nav>
         </div>
 
+        {/* Right side: Clean Organization & Role Info + Theme Toggle + Auth */}
         <div className="flex items-center gap-3">
-          <Show when="signed-in">
-            <div className="flex items-center gap-3">
-              <span className="hidden sm:inline-block text-xs text-slate-400">
-                Workspace Active
-              </span>
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {workspaceName}
+            </span>
+            <span className="text-slate-400 dark:text-slate-600">·</span>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getRoleBadgeColor()}`}>
+              {role === 'ADMIN' ? 'Admin' : role === 'ANALYST' ? 'Analyst' : 'Viewer (Read-Only)'}
+            </span>
+          </div>
+
+          {/* Theme Switcher Toggle */}
+          <ThemeToggle />
+
+          {/* Clerk Auth: User Profile Avatar & Sign In */}
+          {isLoaded && (
+            isSignedIn ? (
               <UserButton />
-            </div>
-          </Show>
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-md transition-all shadow-md shadow-blue-600/20">
-                Sign In
-              </button>
-            </SignInButton>
-          </Show>
+            ) : (
+              <SignInButton mode="modal">
+                <button className="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all">
+                  Sign In
+                </button>
+              </SignInButton>
+            )
+          )}
         </div>
       </div>
     </header>
