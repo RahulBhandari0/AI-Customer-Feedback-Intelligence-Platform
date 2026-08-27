@@ -1,16 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 
-export default function FeedbackForm({
-  workspaceId,
-  userRole,
-  onFeedbackAdded,
-}: {
-  workspaceId: string;
-  userRole: "ADMIN" | "MEMBER";
-  onFeedbackAdded: () => void;
-}) {
+export default function FeedbackForm({ onFeedbackAdded }: { onFeedbackAdded?: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,57 +15,58 @@ export default function FeedbackForm({
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, workspaceId }),
+        body: JSON.stringify({ title, description }),
       });
 
       if (res.ok) {
+        alert("Feedback Submitted Successfully!");
         setTitle("");
         setDescription("");
-        onFeedbackAdded();
+        if (onFeedbackAdded) onFeedbackAdded();
+        window.location.reload(); // Instantly refresh page to fetch new feedback
+      } else {
+        const errorData = await res.json();
+        alert("Server Error: " + JSON.stringify(errorData));
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert("Fetch Error: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border rounded-lg space-y-4 bg-white shadow-sm">
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold text-lg text-gray-800">Add New Feedback</h3>
-        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded font-semibold">
-          Role: {userRole}
-        </span>
-      </div>
-
+    <form onSubmit={handleSubmit} className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+      <h3 className="text-lg font-bold">Add New Feedback</h3>
+      
       <div>
-        <label className="block text-sm font-medium text-gray-700">Title</label>
+        <label className="block text-xs font-semibold mb-1">Title</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          required
-          className="w-full mt-1 p-2 border rounded-md text-sm"
           placeholder="e.g. UI performance issue"
+          required
+          className="w-full px-3 py-2 text-sm rounded border border-slate-300 dark:border-slate-700 bg-transparent"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Description</label>
+        <label className="block text-xs font-semibold mb-1">Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full mt-1 p-2 border rounded-md text-sm"
           placeholder="Detailed feedback..."
           rows={3}
+          required
+          className="w-full px-3 py-2 text-sm rounded border border-slate-300 dark:border-slate-700 bg-transparent"
         />
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium disabled:opacity-50"
       >
         {loading ? "Submitting..." : "Submit Feedback"}
       </button>

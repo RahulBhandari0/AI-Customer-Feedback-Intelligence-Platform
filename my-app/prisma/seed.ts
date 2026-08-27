@@ -1,49 +1,57 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding initial data...')
-
-  // Create Initial Admin User
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@feedback.com' },
-    update: {},
-    create: {
-      email: 'admin@feedback.com',
-      name: 'Admin User',
-      role: 'ADMIN',
+  // 1. Create Workspace
+  const workspace = await prisma.workspace.create({
+    data: {
+      name: "Acme Corp Workspace",
+      slug: "acme-corp",
     },
-  })
+  });
 
-  // Create Sample Feedback
+  // 2. Create Admin User using Relation Connect syntax
+  const user = await prisma.user.create({
+    data: {
+      clerkUserId: "seed_admin_123",
+      name: "Rahul Admin",
+      email: "rahul@example.com",
+      role: "ADMIN",
+      workspace: {
+        connect: { id: workspace.id },
+      },
+    },
+  });
+
+  // 3. Create Sample Feedbacks
   await prisma.feedback.createMany({
     data: [
       {
-        content: 'Great dashboard layout, but loading speed needs improvement.',
-        source: 'Survey',
-        sentiment: 'Neutral',
-        category: 'Performance',
-        userId: admin.id,
+        content: "The dashboard loading speed is fantastic!",
+        sentiment: "POSITIVE",
+        source: "WEB",
+        workspaceId: workspace.id,
+        userId: user.id,
       },
       {
-        content: 'Love the dark mode feature! Works seamlessly.',
-        source: 'Email',
-        sentiment: 'Positive',
-        category: 'Feature Request',
-        userId: admin.id,
+        content: "UI setting menu is a bit confusing.",
+        sentiment: "NEGATIVE",
+        source: "WEB",
+        workspaceId: workspace.id,
+        userId: user.id,
       },
     ],
-  })
+  });
 
-  console.log('Seeding completed successfully!')
+  console.log("Database seeded successfully with Workspace, User, and Feedback!");
 }
 
 main()
   .catch((e) => {
-    console.error(e)
-    process.exit(1)
+    console.error(e);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });
