@@ -1,35 +1,70 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
+datasource db {
+  provider = "postgresql"
+}
 
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
+enum Role {
+  ADMIN
+  ANALYST
+  VIEWER
+  USER
+  MEMBER
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  name      String?
-  role      String     @default("USER")
-  createdAt DateTime   @default(now())
+  id          String            @id @default(uuid())
+  clerkUserId String?
+  email       String            @unique
+  name        String?
+  role        String            @default("USER")
+  feedbacks   Feedback[]
+  memberships WorkspaceMember[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now()) @updatedAt
+}
+
+model Workspace {
+  id        String            @id @default(uuid())
+  name      String
+  slug      String            @unique
+  members   WorkspaceMember[]
   feedbacks Feedback[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  role        Role      @default(MEMBER)
+  userId      String
+  workspaceId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
 }
 
 model Feedback {
-  id        String   @id @default(uuid())
-  content   String
-  source    String
-  sentiment String?
-  category  String?
-  createdAt DateTime @default(now())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
+  id            String     @id @default(cuid())
+  content       String
+  source        String     @default("Web Form")
+  sentiment     String?    // Positive, Neutral, Negative
+  sentimentScore Float?    @default(0.0)
+  category      String?    // Performance, Bug, Feature Request, UI/UX, Billing, General
+  urgency       String?    @default("Medium") // High, Medium, Low
+  status        String?    @default("NEW")    // NEW, IN_REVIEW, ACTIONED
+  customerName  String?
+  customerEmail String?
+  summary       String?
+  tags          String[]   @default([])
+  createdAt     DateTime   @default(now())
+  userId        String?
+  workspaceId   String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model AnalyticsReport {
