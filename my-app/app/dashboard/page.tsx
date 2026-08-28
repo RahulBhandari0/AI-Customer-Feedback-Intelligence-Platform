@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import FeedbackForm from "@/components/FeedbackForm";
+import CsvUploader from "@/components/CsvUploader";
+
 
 interface Workspace {
   id: string;
@@ -15,7 +17,10 @@ interface Feedback {
   title: string;
   description: string;
   createdAt: string;
+  content?: string;
+  source?: string;
 }
+
 
 export default function DashboardPage() {
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
@@ -49,7 +54,7 @@ export default function DashboardPage() {
     if (!currentWorkspace) return;
 
     try {
-      const res = await fetch("/api/feedback", {
+      const res = await fetch("/api/feedback?workspaceId=${activeWorkspace.id}", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -57,6 +62,8 @@ export default function DashboardPage() {
           workspaceId: currentWorkspace.id,
         }),
       });
+
+    
 
       if (res.ok) {
         fetchFeedbacks(currentWorkspace.id);
@@ -86,6 +93,11 @@ export default function DashboardPage() {
             onFeedbackAdded={() => fetchFeedbacks(currentWorkspace.id)}
           />
 
+          <CsvUploader 
+             workspaceId={currentWorkspace.id} 
+             onUploadSuccess={() => fetchFeedbacks(currentWorkspace.id)} 
+          />
+
           {/* Feedback List Section */}
           <div className="space-y-4">
             <h3 className="font-semibold text-xl text-gray-800">Workspace Feedbacks</h3>
@@ -99,9 +111,17 @@ export default function DashboardPage() {
                 {feedbacks.map((item) => (
                   <div key={item.id} className="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-start">
                     <div>
-                      <h4 className="font-bold text-lg text-gray-900">{item.title}</h4>
-                      <p className="text-gray-600 mt-1">{item.description}</p>
+                      <h4 className="font-bold text-lg text-gray-900">{item.content || item.title || "No Content"}</h4>
+                      {item.description && (
+                        <p className="text-gray-600 mt-1">{item.description}</p>
+                      )}
                     </div>
+
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="px-2 py-0.5 text-xs bg-gray-800 rounded">
+                        {item.source || "DIRECT"}
+                      </span>
+                      </div>
 
                     {/* RBAC UI Rule: Only show Delete button to ADMIN */}
                     {currentWorkspace.role === "ADMIN" && (

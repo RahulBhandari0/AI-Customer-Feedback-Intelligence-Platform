@@ -1,35 +1,42 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-// Sample array in memory (test karne ke liye)
-let memoryFeedbacks: any[] = [];
-
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   try {
-    const body = await req.json();
+    const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get("workspaceId");
 
-    const newFeedback = {
-      id: Date.now().toString(),
-      content: `${body.title}: ${body.description}`,
-      sentiment: "POSITIVE",
-      source: "Web Form",
-      createdAt: new Date(),
-    };
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "workspaceId is required" },
+        { status: 400 }
+      );
+    }
 
-    memoryFeedbacks.unshift(newFeedback);
+    // Single workspace ke SAARI feedbacks retrieve karein (chahe user dwara ho ya Ingestion Bot dwara)
+    const feedbacks = await prisma.feedback.findMany({
+      where: {
+        workspaceId: workspaceId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
+    return NextResponse.json(feedbacks);
+  } catch (err: any) {
+    console.error("Fetch feedbacks error:", err);
     return NextResponse.json(
-      { success: true, data: newFeedback },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("API Error:", error);
-    return NextResponse.json(
-      { error: "Failed to submit feedback" },
+      { error: "Failed to fetch feedbacks" },
       { status: 500 }
     );
   }
-}
-
-export async function GET() {
-  return NextResponse.json(memoryFeedbacks, { status: 200 });
 }
