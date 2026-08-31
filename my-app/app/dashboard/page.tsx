@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import FeedbackForm from "@/components/FeedbackForm";
 import CsvUploader from "@/components/CsvUploader";
-
+import Analytics from "@/components/dashboard/Analytics";
 
 interface Workspace {
   id: string;
@@ -12,135 +12,95 @@ interface Workspace {
   role: "ADMIN" | "MEMBER";
 }
 
-interface Feedback {
-  id: string;
-  title: string;
-  description: string;
-  createdAt: string;
-  content?: string;
-  source?: string;
+interface SentimentData {
+  name: string;
+  value: number;
 }
 
+interface ChannelData {
+  name: string;
+  count: number;
+}
 
-export default function DashboardPage() {
+interface AnalyticsData {
+  totalCount: number;
+  sentimentData: SentimentData[];
+  channelData: ChannelData[];
+}
+
+export default function Dashboard() {
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  // Selected workspace ke feedbacks fetch karein
-  const fetchFeedbacks = async (workspaceId: string) => {
-    setLoading(true);
+  // Analytics States
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
+    totalCount: 0,
+    sentimentData: [],
+    channelData: [],
+  });
+  const [loadingAnalytics, setLoadingAnalytics] = useState<boolean>(true);
+
+  // Analytics Data Fetching
+  const fetchAnalytics = async (workspaceId?: string) => {
     try {
-      const res = await fetch(`/api/feedback?workspaceId=${workspaceId}`);
+      setLoadingAnalytics(true);
+      const url = workspaceId
+        ? `/api/analytics?workspaceId=${workspaceId}`
+        : "/api/analytics";
+
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setFeedbacks(data);
+        setAnalyticsData(data);
       }
-    } catch (err) {
-      console.error("Error fetching feedbacks:", err);
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
     } finally {
-      setLoading(false);
+      setLoadingAnalytics(false);
     }
   };
 
   useEffect(() => {
     if (currentWorkspace?.id) {
-      fetchFeedbacks(currentWorkspace.id);
+      fetchAnalytics(currentWorkspace.id);
+    } else {
+      fetchAnalytics();
     }
   }, [currentWorkspace]);
 
-  // ADMIN only: Delete Feedback
-  const handleDelete = async (feedbackId: string) => {
-    if (!currentWorkspace) return;
-
-    try {
-      const res = await fetch("/api/feedback?workspaceId=${activeWorkspace.id}", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          feedbackId,
-          workspaceId: currentWorkspace.id,
-        }),
-      });
-
-    
-
-      if (res.ok) {
-        fetchFeedbacks(currentWorkspace.id);
-      } else {
-        const data = await res.json();
-        alert(data.error || "Permission Denied");
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-    }
-  };
-
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8">
-      {/* Top Header & Workspace Switcher */}
-      <div className="flex justify-between items-center p-4 border-b bg-gray-50 rounded-lg">
-        <h1 className="text-2xl font-bold">Feedback Dashboard</h1>
-        <WorkspaceSwitcher onSelectWorkspace={(ws) => setCurrentWorkspace(ws)} />
+    <div className="p-8 max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Analytics & Feedback Dashboard
+          </h1>
+          <p className="text-sm text-gray-500">
+            Total Feedbacks:{" "}
+            <span className="font-semibold text-blue-600">
+              {analyticsData.totalCount}
+            </span>
+          </p>
+        </div>
+        <WorkspaceSwitcher onWorkspaceChange={(ws) => setCurrentWorkspace(ws)} />
       </div>
 
-      {currentWorkspace ? (
-        <div className="space-y-8">
-          {/* Feedback Add Form */}
-          <FeedbackForm
-            workspaceId={currentWorkspace.id}
-            userRole={currentWorkspace.role}
-            onFeedbackAdded={() => fetchFeedbacks(currentWorkspace.id)}
-          />
-
-          <CsvUploader 
-             workspaceId={currentWorkspace.id} 
-             onUploadSuccess={() => fetchFeedbacks(currentWorkspace.id)} 
-          />
-
-          {/* Feedback List Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-xl text-gray-800">Workspace Feedbacks</h3>
-            
-            {loading ? (
-              <p className="text-gray-500">Loading feedbacks...</p>
-            ) : feedbacks.length === 0 ? (
-              <p className="text-gray-500">No feedbacks found in this workspace.</p>
-            ) : (
-              <div className="grid gap-4">
-                {feedbacks.map((item) => (
-                  <div key={item.id} className="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-lg text-gray-900">{item.content || item.title || "No Content"}</h4>
-                      {item.description && (
-                        <p className="text-gray-600 mt-1">{item.description}</p>
-                      )}
-                    </div>
-
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="px-2 py-0.5 text-xs bg-gray-800 rounded">
-                        {item.source || "DIRECT"}
-                      </span>
-                      </div>
-
-                    {/* RBAC UI Rule: Only show Delete button to ADMIN */}
-                    {currentWorkspace.role === "ADMIN" && (
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Analytics Charts Section */}
+      {loadingAnalytics ? (
+        <div className="p-8 text-center text-gray-500 bg-white rounded-lg border">
+          Loading Analytics Charts...
         </div>
       ) : (
-        <p className="text-gray-500">Loading workspace...</p>
+        <Analytics
+          sentimentData={analyticsData.sentimentData}
+          channelData={analyticsData.channelData}
+        />
       )}
+
+      {/* Forms & Uploaders */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <FeedbackForm workspaceId={currentWorkspace?.id} />
+        <CsvUploader workspaceId={currentWorkspace?.id} />
+      </div>
     </div>
   );
 }

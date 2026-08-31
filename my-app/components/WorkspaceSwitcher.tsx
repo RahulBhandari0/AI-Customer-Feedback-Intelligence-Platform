@@ -25,7 +25,9 @@ export default function WorkspaceSwitcher({
           setWorkspaces(data);
           if (data.length > 0) {
             setSelectedId(data[0].id);
-            onSelectWorkspace(data[0]);
+            if (typeof onSelectWorkspace === "function"){
+              onSelectWorkspace(data[0]);
+            }
           }
         }
       } catch (err) {
