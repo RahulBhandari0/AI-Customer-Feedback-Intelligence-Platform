@@ -1,17 +1,26 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    const apiKey = process.env.GROQ_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "GROQ_API_KEY environment variable missing" },
+        { status: 500 }
+      );
+    }
+
     const { text } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
     }
+
+    const groq = new Groq({ apiKey });
 
     const completion = await groq.chat.completions.create({
       messages: [
@@ -27,7 +36,7 @@ export async function POST(req: Request) {
 Feedback: "${text}"`,
         },
       ],
-      model: "openai/gpt-oss-20b",
+      model: "llama-3.1-8b-instant",
       response_format: { type: "json_object" },
     });
 
