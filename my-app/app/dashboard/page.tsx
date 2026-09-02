@@ -5,7 +5,10 @@ import FeedbackForm from "@/components/FeedbackForm";
 import CsvUpload from "@/components/CsvUpload";
 import FeedbackInbox from "@/components/FeedbackInbox";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
-import Analytics from "@/components/dashboard/Analytics"; // <-- Corrected path
+import Analytics from "@/components/dashboard/Analytics"; 
+import AiInsightsCard from "@/components/dashboard/AilnsightsCard";
+
+<AiInsightsCard />
 
 export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);

@@ -11,6 +11,9 @@ export default function FeedbackForm({ workspaceId }: FeedbackFormProps) {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Prisma Studio ki existing Workspace ID as automatic fallback
+  const activeWorkspaceId = workspaceId || "cmtbcxvci0000ex7dtmteat";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -28,7 +31,7 @@ export default function FeedbackForm({ workspaceId }: FeedbackFormProps) {
         body: JSON.stringify({
           title,
           description,
-          workspaceId: workspaceId || undefined,
+          workspaceId: activeWorkspaceId,
         }),
       });
 

@@ -57,9 +57,10 @@ model Feedback {
   content     String
   source      String
   userId      String
-  workspaceId String
+  workspaceId String?
   createdAt   DateTime  @default(now())
-  sentiment   String?
+  sentiment   String
+  urgency     Boolean   @default(false)
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
