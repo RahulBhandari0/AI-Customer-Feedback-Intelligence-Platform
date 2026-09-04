@@ -1,0 +1,125 @@
+import { NextResponse } from "next/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get("workspaceId");
+
+    let whereClause = {};
+    if (workspaceId && workspaceId !== "undefined") {
+      whereClause = { workspaceId };
+    }
+
+    const feedbacks = await prisma.feedback.findMany({
+      where: whereClause,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(feedbacks);
+  } catch (error: any) {
+    return NextResponse.json(
+      { message: "Failed to fetch feedbacks", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { title, description, workspaceId } = body;
+
+    if (!title && !description) {
+      return NextResponse.json(
+        { message: "Missing required feedback content" },
+        { status: 400 }
+      );
+    }
+
+    // Verify workspace exists in DB or fallback to default workspace
+    let dbWorkspace = null;
+    if (workspaceId && workspaceId !== "undefined") {
+      dbWorkspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      });
+    }
+
+    if (!dbWorkspace) {
+      dbWorkspace = await prisma.workspace.findFirst();
+      if (!dbWorkspace) {
+        dbWorkspace = await prisma.workspace.create({
+          data: {
+            name: "Acme Corp Workspace",
+            slug: "acme-corp",
+          },
+        });
+      }
+    }
+
+    // Attempt to identify current authenticated user via Clerk
+    let dbUser = null;
+    try {
+      const { userId } = await auth();
+      if (userId) {
+        dbUser = await prisma.user.findFirst({
+          where: {
+            OR: [{ id: userId }, { clerkUserId: userId }],
+          },
+        });
+
+        if (!dbUser) {
+          const user = await currentUser();
+          const email = user?.emailAddresses[0]?.emailAddress || `${userId}@example.com`;
+          const name = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "User";
+          dbUser = await prisma.user.create({
+            data: {
+              clerkUserId: userId,
+              email,
+              name,
+            },
+          });
+        }
+      }
+    } catch {
+      // Auth check failed or unauthenticated request
+    }
+
+    // Fallback user if not logged in or auth is omitted
+    if (!dbUser) {
+      dbUser = await prisma.user.findFirst();
+      if (!dbUser) {
+        dbUser = await prisma.user.create({
+          data: {
+            clerkUserId: "default_user",
+            email: "user@example.com",
+            name: "Default User",
+          },
+        });
+      }
+    }
+
+    const contentText = title && description && title !== description 
+      ? `${title}: ${description}` 
+      : (description || title);
+
+    const newFeedback = await prisma.feedback.create({
+      data: {
+        content: contentText,
+        source: "IN_APP",
+        workspaceId: dbWorkspace.id,
+        userId: dbUser.id,
+      },
+    });
+
+    return NextResponse.json(newFeedback, { status: 201 });
+  } catch (error: any) {
+    console.error("POST Error:", error);
+    return NextResponse.json(
+      { message: "Failed to create feedback", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+

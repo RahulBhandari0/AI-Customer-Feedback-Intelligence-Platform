@@ -1,0 +1,63 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import FeedbackForm from "@/components/FeedbackForm";
+import CsvUpload from "@/components/CsvUpload";
+import FeedbackInbox from "@/components/FeedbackInbox";
+import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
+import Analytics from "@/components/dashboard/Analytics"; 
+import AiInsightsCard from "@/components/dashboard/AilnsightsCard";
+
+<AiInsightsCard />
+
+export default function DashboardPage() {
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [currentWorkspace, setCurrentWorkspace] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        const res = await fetch("/api/workspace");
+        if (res.ok) {
+          const data = await res.json();
+          setWorkspaces(data);
+          if (data.length > 0) setCurrentWorkspace(data[0]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch workspaces", err);
+      }
+    };
+    fetchWorkspaces();
+  }, []);
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto space-y-6 bg-background min-h-screen">
+      {/* Top Header */}
+      <div className="flex justify-between items-center border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Customer Feedback Intelligence</h1>
+          <p className="text-sm text-gray-500">Manage feedback, analytics, and bulk import.</p>
+        </div>
+        {WorkspaceSwitcher && (
+          <WorkspaceSwitcher onSelectWorkspace={(ws: any) => setCurrentWorkspace(ws)} />
+        )}
+      </div>
+
+      {/* Analytics Graph Section (Full Width Top) */}
+      <div className="w-full">
+        <Analytics workspaceId={currentWorkspace?.id} />
+      </div>
+
+      {/* Main Form & Inbox Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <FeedbackForm workspaceId={currentWorkspace?.id} />
+          <CsvUpload workspaceId={currentWorkspace?.id} />
+        </div>
+        <div>
+          <FeedbackInbox workspaceId={currentWorkspace?.id} />
+        </div>
+      </div>
+    </div>
+  );
+}

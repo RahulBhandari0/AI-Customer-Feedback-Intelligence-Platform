@@ -42,4 +42,9 @@ next-env.d.ts
 
 /app/generated/prisma
 
+<<<<<<< HEAD
 .env.local
+=======
+.env*.local
+.env
+>>>>>>> feature1
