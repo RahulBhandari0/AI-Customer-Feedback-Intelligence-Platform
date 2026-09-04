@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+=======
+datasource db {
+  provider = "postgresql"
+}
+
+>>>>>>> origin/feedback
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,10 +16,17 @@ datasource db {
 
 enum Role{
   ADMIN
+<<<<<<< HEAD
+=======
+  ANALYST
+  VIEWER
+  USER
+>>>>>>> origin/feedback
   MEMBER
 }
 
 model User {
+<<<<<<< HEAD
   id          String     @id @default(cuid())
   clerkUserId String     @unique
   email       String     @unique
@@ -48,11 +62,42 @@ model WorkspaceMember {
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+=======
+  id          String            @id @default(uuid())
+  clerkUserId String?
+  email       String            @unique
+  name        String?
+  role        String            @default("USER")
+  feedbacks   Feedback[]
+  memberships WorkspaceMember[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now()) @updatedAt
+}
+
+model Workspace {
+  id        String            @id @default(uuid())
+  name      String
+  slug      String            @unique
+  members   WorkspaceMember[]
+  feedbacks Feedback[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  role        Role      @default(MEMBER)
+  userId      String
+  workspaceId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+>>>>>>> origin/feedback
 
   @@unique([userId, workspaceId])
 }
 
 model Feedback {
+<<<<<<< HEAD
   id          String    @id @default(cuid())
   content     String
   source      String
@@ -66,3 +111,31 @@ model Feedback {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace?  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
+=======
+  id            String     @id @default(cuid())
+  content       String
+  source        String     @default("Web Form")
+  sentiment     String?    // Positive, Neutral, Negative
+  sentimentScore Float?    @default(0.0)
+  category      String?    // Performance, Bug, Feature Request, UI/UX, Billing, General
+  urgency       String?    @default("Medium") // High, Medium, Low
+  status        String?    @default("NEW")    // NEW, IN_REVIEW, ACTIONED
+  customerName  String?
+  customerEmail String?
+  summary       String?
+  tags          String[]   @default([])
+  createdAt     DateTime   @default(now())
+  userId        String?
+  workspaceId   String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model AnalyticsReport {
+  id          String   @id @default(uuid())
+  title       String
+  summary     String
+  keyInsights String
+  createdAt   DateTime @default(now())
+}
+>>>>>>> origin/feedback

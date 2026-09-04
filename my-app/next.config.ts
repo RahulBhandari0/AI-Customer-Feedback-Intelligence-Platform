@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -5,5 +6,10 @@ const nextConfig = {
   },
  
 };
+=======
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {};
+>>>>>>> origin/feedback
 
 export default nextConfig;
